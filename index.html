@@ -1,0 +1,751 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TQQQ Signal Board</title>
+<style>
+  :root {
+    --bg: #f5f4f0; --card: #ffffff; --ink: #1b1d22; --muted: #6b6f78; --line: #e3e1db;
+    --tqqq: #0f8a5f; --tqqq-bg: #e3f4ec; --sqqq: #c2362b; --sqqq-bg: #fbe7e5;
+    --cash: #5b6170; --cash-bg: #eceef2; --warn: #b26b00; --warn-bg: #fff3dc; --accent: #2a5bd7;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #121417; --card: #1b1e23; --ink: #eceef1; --muted: #9aa0aa; --line: #2c3037;
+      --tqqq: #3fd29a; --tqqq-bg: #10291f; --sqqq: #ff6b5e; --sqqq-bg: #33171a;
+      --cash: #b4bac6; --cash-bg: #252931; --warn: #ffb547; --warn-bg: #33270f; --accent: #7aa2ff;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 20px 16px 48px; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 16px; }
+  h1 { font-size: 20px; margin: 0; letter-spacing: -0.01em; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0 0 12px; font-weight: 600; }
+  h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin: 14px 0 4px; font-weight: 600; }
+  .sub { color: var(--muted); font-size: 13px; }
+  .grid { display: grid; gap: 14px; grid-template-columns: repeat(12, 1fr); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; min-width: 0; }
+  .span-12 { grid-column: span 12; } .span-7 { grid-column: span 7; } .span-5 { grid-column: span 5; }
+  @media (max-width: 760px) { .span-7, .span-5 { grid-column: span 12; } }
+
+  .hero { display: flex; flex-wrap: wrap; gap: 18px; align-items: stretch; }
+  .signal { flex: 1 1 260px; border-radius: 10px; padding: 18px; }
+  .signal .label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85; font-weight: 600; }
+  .signal .value { font-size: 40px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; margin: 4px 0; }
+  .signal .mix { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+  .signal .why { font-size: 14px; }
+  .s-TQQQ { background: var(--tqqq-bg); color: var(--tqqq); }
+  .s-SQQQ { background: var(--sqqq-bg); color: var(--sqqq); }
+  .s-CASH { background: var(--cash-bg); color: var(--cash); }
+  .action { flex: 1 1 260px; display: flex; flex-direction: column; gap: 8px; }
+  .action .big { font-size: 21px; font-weight: 700; }
+  .pill { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+  .p-final { background: var(--tqqq-bg); color: var(--tqqq); }
+  .p-prov { background: var(--warn-bg); color: var(--warn); }
+  .p-err { background: var(--sqqq-bg); color: var(--sqqq); }
+  .note { background: var(--warn-bg); color: var(--warn); border-radius: 8px; padding: 10px 12px; font-size: 13px; }
+  .note b { font-weight: 700; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 7px 6px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .tag { font-weight: 700; white-space: nowrap; }
+  .t-TQQQ { color: var(--tqqq); } .t-SQQQ { color: var(--sqqq); } .t-CASH { color: var(--cash); }
+  .scroll { max-height: 340px; overflow: auto; }
+  .ok { color: var(--tqqq); font-weight: 700; } .bad { color: var(--sqqq); font-weight: 700; }
+
+  .meter { position: relative; height: 8px; background: var(--line); border-radius: 4px; margin: 6px 0 2px; }
+  .meter .fill { position: absolute; top: 0; bottom: 0; left: 0; border-radius: 4px; background: var(--accent); }
+  .meter .mark { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--ink); opacity: 0.6; }
+  .kv { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; padding: 5px 0; }
+  .kv span:first-child { color: var(--muted); }
+  .kv b { font-variant-numeric: tabular-nums; text-align: right; }
+
+  label { display: block; font-size: 13px; color: var(--muted); margin: 8px 0 4px; }
+  input, select { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px;
+    background: var(--bg); color: var(--ink); font: inherit; }
+  .row3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  @media (max-width: 560px) { .row3 { grid-template-columns: 1fr; } }
+  button { font: inherit; font-weight: 600; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line);
+    background: var(--card); color: var(--ink); cursor: pointer; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  .btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .slots { display: flex; gap: 8px; flex-wrap: wrap; }
+  .slot { flex: 1 1 120px; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 13px; }
+  .slot b { display: block; font-size: 15px; }
+  .slot.done { opacity: 0.55; } .slot.next { border-color: var(--accent); }
+  .slot.decide { border-width: 2px; border-color: var(--warn); }
+  .log { font-size: 12px; color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; max-height: 140px; overflow: auto; white-space: pre-wrap; }
+  footer { margin-top: 18px; font-size: 12px; color: var(--muted); }
+  details summary { cursor: pointer; font-weight: 600; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>TQQQ / SQQQ / Cash — Signal Board</h1>
+      <div class="sub">Trend + RSI + volatility sizing + OBV filter · decide at 3:45 PM, trade market-on-close · data from Twelve Data · US Eastern</div>
+    </div>
+    <div class="sub" id="clock"></div>
+  </header>
+
+  <div class="card span-12 hidden" id="setup" style="margin-bottom:14px">
+    <h2>One-time setup</h2>
+    <p style="margin-top:0">This page needs a free Twelve Data API key to download daily prices for QQQ, TQQQ and SQQQ.
+      Create a free account at <a href="https://twelvedata.com/register" target="_blank" rel="noopener">twelvedata.com</a>,
+      copy your API key from the dashboard, and paste it below. The key is stored only in this browser.</p>
+    <label for="keyInput">Twelve Data API key</label>
+    <input id="keyInput" type="password" autocomplete="off" placeholder="Paste your API key">
+    <div class="btns"><button class="primary" id="saveKey">Save key and load signal</button></div>
+  </div>
+
+  <div class="grid">
+    <!-- Signal + action -->
+    <div class="card span-12">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+        <h2 style="margin:0">Target allocation</h2>
+        <div><span class="pill" id="statusPill">Not loaded</span> <span class="sub" id="asOf"></span></div>
+      </div>
+      <div class="hero">
+        <div class="signal s-CASH" id="sigBox">
+          <div class="label" id="sigLabel">Target</div>
+          <div class="value" id="sigValue">—</div>
+          <div class="mix" id="sigMix"></div>
+          <div class="why" id="sigWhy">Load data to see the target.</div>
+        </div>
+        <div class="action">
+          <div class="sub">What to do in your account</div>
+          <div class="big" id="actionText">—</div>
+          <div id="sizeText" class="sub"></div>
+          <div class="note" id="timingNote"><b>Trade at the close.</b> Compute at 3:45 PM ET and use market-on-close orders. Waiting until the next morning significantly degrades results.</div>
+        </div>
+      </div>
+      <div id="confirmedLine" class="sub" style="margin-top:10px"></div>
+    </div>
+
+    <!-- Rebalance -->
+    <div class="card span-12">
+      <h2>Rebalance check</h2>
+      <div class="sub" id="rebalNote" style="margin-bottom:8px">Enter your current holdings under “Your holdings and settings” to see the trades. Rebalance when the target changes or any holding drifts more than 5 percentage points from target.</div>
+      <div style="overflow-x:auto">
+        <table id="rebalTable" class="hidden">
+          <thead><tr><th>Asset</th><th class="num">Now</th><th class="num">Target</th><th class="num">Drift</th><th class="num">Trade</th></tr></thead>
+          <tbody id="rebalBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Indicators -->
+    <div class="card span-7">
+      <h2>Rule inputs</h2>
+      <h3 style="margin-top:0">Trend (QQQ)</h3>
+      <div class="kv"><span>QQQ price</span><b id="qPrice">—</b></div>
+      <div class="kv"><span>200-day average</span><b id="qSma">—</b></div>
+      <div class="kv"><span>QQQ vs 200-day</span><b id="qDist">—</b></div>
+      <div class="kv"><span id="qSlopeLbl">200-day average 20 days ago</span><b id="qSlope">—</b></div>
+      <div class="kv"><span>Regime</span><b id="regime">—</b></div>
+
+      <h3>Sizing</h3>
+      <div class="kv"><span id="volLbl">QQQ 20-day annualized volatility</span><b id="qVol">—</b></div>
+      <div class="kv"><span>Volatility-sized TQQQ</span><b id="volSize">—</b></div>
+      <div class="kv"><span id="obvLbl">QQQ OBV vs its 50-day EMA</span><b id="obvStat">—</b></div>
+
+      <h3>TQQQ</h3>
+      <div class="kv"><span>TQQQ price</span><b id="tPrice">—</b></div>
+      <div class="kv"><span id="rsiLbl">TQQQ RSI (10)</span><b id="tRsi">—</b></div>
+      <div class="meter" title="RSI 0–100; marks at the oversold and overbought thresholds">
+        <div class="fill" id="rsiFill" style="width:0"></div>
+        <div class="mark" id="markCold"></div><div class="mark" id="markHot"></div>
+      </div>
+      <div class="sub" id="rsiScale"></div>
+      <div class="kv"><span id="tSmaLbl">TQQQ 20-day average</span><b id="tSma">—</b></div>
+      <div class="kv"><span>TQQQ vs 20-day</span><b id="tDist">—</b></div>
+    </div>
+
+    <!-- Flip levels -->
+    <div class="card span-5">
+      <h2>What would change it today</h2>
+      <div class="sub" style="margin-bottom:6px">Closing prices that would flip a rule today, given history through yesterday.</div>
+      <div class="kv"><span>QQQ crosses its 200-day at</span><b id="flipQ">—</b></div>
+      <div class="kv"><span>200-day turns rising above</span><b id="flipSlope">—</b></div>
+      <div class="kv"><span>TQQQ RSI hits overbought at</span><b id="flipHot">—</b></div>
+      <div class="kv"><span>TQQQ RSI hits oversold at</span><b id="flipCold">—</b></div>
+      <div class="kv"><span>TQQQ crosses its 20-day at</span><b id="flipT">—</b></div>
+      <div class="sub" id="flipNote" style="margin-top:8px"></div>
+      <h3>Volatility size bands</h3>
+      <table><tbody id="bandBody"></tbody></table>
+    </div>
+
+    <!-- Schedule -->
+    <div class="card span-12">
+      <h2>Update schedule (weekdays, ET)</h2>
+      <div class="slots" id="slots"></div>
+      <div class="btns">
+        <button class="primary" id="refreshBtn">Update now</button>
+        <button id="notifyBtn">Turn on change alerts</button>
+      </div>
+      <div class="sub" id="nextUpdate" style="margin-top:8px"></div>
+    </div>
+
+    <!-- Recent days -->
+    <div class="card span-7">
+      <h2>Recent sessions</h2>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Date</th><th class="num">QQQ</th><th class="num">TQQQ</th><th class="num">RSI</th><th class="num">Vol</th><th>Target</th></tr></thead>
+          <tbody id="histBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Flips -->
+    <div class="card span-5">
+      <h2>Recent target changes</h2>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Date</th><th>From</th><th>To</th></tr></thead>
+          <tbody id="flipBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Settings -->
+    <div class="card span-12">
+      <details id="settingsBox">
+        <summary>Your holdings and settings</summary>
+        <h3>Current holdings</h3>
+        <div class="row3">
+          <div><label for="tqqqSh">TQQQ shares</label><input id="tqqqSh" type="number" min="0" step="1" placeholder="0"></div>
+          <div><label for="sqqqSh">SQQQ shares</label><input id="sqqqSh" type="number" min="0" step="1" placeholder="0"></div>
+          <div><label for="cashAmt">Cash / T-bills ($)</label><input id="cashAmt" type="number" min="0" step="100" placeholder="e.g. 5000"></div>
+        </div>
+        <h3>Rules</h3>
+        <div class="row3">
+          <div>
+            <label for="mode">Trade the SQQQ leg?</label>
+            <select id="mode"><option value="full">Yes — 50% SQQQ in downtrends</option><option value="long">No — treat SQQQ as cash</option></select>
+          </div>
+          <div>
+            <label for="obvOn">OBV filter (B+ OBV)</label>
+            <select id="obvOn"><option value="on">On — halve TQQQ when OBV is weak</option><option value="off">Off</option></select>
+          </div>
+          <div><label for="drift">Rebalance drift band (pp)</label><input id="drift" type="number" min="0" step="0.5"></div>
+        </div>
+        <div class="row3">
+          <div><label for="smaLen">QQQ trend average (days)</label><input id="smaLen" type="number" min="10" step="1"></div>
+          <div><label for="slopeLen">Trend slope lookback (days)</label><input id="slopeLen" type="number" min="1" step="1"></div>
+          <div><label for="volTarget">Sizing numerator (%) — size = this ÷ (3 × vol)</label><input id="volTarget" type="number" min="1" step="1"></div>
+        </div>
+        <div class="row3">
+          <div><label for="rsiLen">RSI length (days)</label><input id="rsiLen" type="number" min="2" step="1"></div>
+          <div><label for="rsiHot">Overbought RSI</label><input id="rsiHot" type="number" step="0.5"></div>
+          <div><label for="rsiCold">Oversold RSI</label><input id="rsiCold" type="number" step="0.5"></div>
+        </div>
+        <div class="row3">
+          <div><label for="fastLen">TQQQ short average (days)</label><input id="fastLen" type="number" min="2" step="1"></div>
+          <div><label for="volLen">Volatility window (days)</label><input id="volLen" type="number" min="5" step="1"></div>
+          <div><label for="obvLen">OBV EMA length (days)</label><input id="obvLen" type="number" min="2" step="1"></div>
+        </div>
+        <label for="slotsInput">Update times (ET, HH:MM, comma-separated)</label>
+        <input id="slotsInput" type="text">
+        <label for="keyEdit">Twelve Data API key</label>
+        <input id="keyEdit" type="password" autocomplete="off">
+        <div class="btns">
+          <button class="primary" id="saveSettings">Save settings</button>
+          <button id="resetSettings">Restore rule defaults</button>
+        </div>
+      </details>
+    </div>
+
+    <div class="card span-12">
+      <h2>Update log</h2>
+      <div class="log" id="log"></div>
+    </div>
+  </div>
+
+  <footer>
+    <b>Execution:</b> compute at ~3:45 PM ET and trade with market-on-close orders (most brokers stop accepting MOC orders around 3:50 PM ET); next-morning execution degrades results.
+    <b>Uptrend</b> = QQQ above its 200-day average <i>and</i> that average higher than 20 trading days earlier; anything else is a downtrend.
+    <b>Uptrend:</b> TQQQ 10-day RSI above 79 → 100% cash. Otherwise TQQQ = 0.6 ÷ (3 × QQQ 20-day annualized volatility), rounded to the nearest 25% and capped at 100%; halved when on-balance volume is below its 50-day EMA (OBV uses QQQ volume as a proxy for the Nasdaq-100). The rest sits in cash / T-bills.
+    <b>Downtrend:</b> RSI below 31 → 100% TQQQ; otherwise TQQQ below its 20-day average → 50% SQQQ / 50% cash; otherwise 100% cash.
+    <b>Rebalance</b> when the target changes or any holding drifts more than 5 percentage points.
+    Leveraged ETFs can lose most of their value in a drawdown. This page is a calculator for your own decisions, not financial advice. It only updates while open in your browser.
+  </footer>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  // ---------- Settings & storage ----------
+  const RULE_DEFAULTS = { smaLen: 200, slopeLen: 20, rsiLen: 10, rsiHot: 79, rsiCold: 31, fastLen: 20,
+                          volLen: 20, volTarget: 60, obvOn: "on", obvLen: 50, drift: 5, mode: "full" };
+  const DEFAULTS = Object.assign({}, RULE_DEFAULTS, { tqqqSh: "", sqqqSh: "", cashAmt: "", slots: "09:45,12:30,15:45" });
+  const NUM_KEYS = ["smaLen", "slopeLen", "rsiLen", "rsiHot", "rsiCold", "fastLen", "volLen", "volTarget", "obvLen", "drift"];
+  const INT_KEYS = ["smaLen", "slopeLen", "rsiLen", "fastLen", "volLen", "obvLen"];
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem("tqqqBoard." + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem("tqqqBoard." + k, JSON.stringify(v)); } catch (e) {} }
+  };
+  let cfg = Object.assign({}, DEFAULTS, store.get("cfg", {}));
+  let apiKey = store.get("apiKey", "");
+  let last = null;
+  let loading = false;
+
+  const $ = id => document.getElementById(id);
+  const ok = x => x !== null && x !== undefined && isFinite(x);
+  const fmt = (x, d = 2) => !ok(x) ? "—" : x.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+  const pct = x => !ok(x) ? "—" : (x >= 0 ? "+" : "") + fmt(x * 100, 1) + "%";
+  const pc = x => !ok(x) ? "—" : (Math.round(x * 1000) / 10) + "%";
+  const money = x => !ok(x) ? "—" : "$" + fmt(x, 2);
+
+  function log(msg) {
+    const line = "[" + etParts().hhmmss + " ET] " + msg;
+    const el = $("log"); el.textContent = line + "\n" + el.textContent;
+    const arr = store.get("log", []); arr.unshift(line); store.set("log", arr.slice(0, 60));
+  }
+
+  // ---------- Eastern time helpers ----------
+  function etParts(date = new Date()) {
+    const f = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", year: "numeric", month: "2-digit",
+      day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", weekday: "short", hourCycle: "h23" });
+    const p = {}; f.formatToParts(date).forEach(x => p[x.type] = x.value);
+    return { ymd: `${p.year}-${p.month}-${p.day}`, mins: (+p.hour) * 60 + (+p.minute), weekday: p.weekday,
+             hhmmss: `${p.hour}:${p.minute}:${p.second}`, isWeekday: !["Sat", "Sun"].includes(p.weekday) };
+  }
+  const parseSlots = s => String(s).split(",").map(x => x.trim()).filter(x => /^\d{1,2}:\d{2}$/.test(x))
+    .map(x => { const [h, m] = x.split(":").map(Number); return { label: x, mins: h * 60 + m }; })
+    .filter(x => x.mins >= 0 && x.mins < 1440).sort((a, b) => a.mins - b.mins);
+  const marketOpenNow = et => et.isWeekday && et.mins >= 570 && et.mins < 960;
+  const isDecisionSlot = m => m >= 930 && m <= 955;   // 3:30–3:55 PM
+  const fmtSlot = m => { const h = Math.floor(m / 60), mm = String(m % 60).padStart(2, "0");
+    return ((h + 11) % 12 + 1) + ":" + mm + (h < 12 ? " AM" : " PM"); };
+
+  // ---------- Data ----------
+  async function fetchDaily(symbol) {
+    const url = "https://api.twelvedata.com/time_series?symbol=" + encodeURIComponent(symbol) +
+      "&interval=1day&outputsize=500&apikey=" + encodeURIComponent(apiKey);
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(symbol + ": HTTP " + r.status);
+    const j = await r.json();
+    if (j.status !== "ok" || !Array.isArray(j.values)) throw new Error(symbol + ": " + (j.message || "unexpected response"));
+    return j.values.map(v => ({ d: v.datetime.slice(0, 10), c: parseFloat(v.close), v: parseFloat(v.volume) }))
+      .filter(v => isFinite(v.c)).reverse();   // oldest first
+  }
+
+  // ---------- Indicators ----------
+  function sma(arr, n) {
+    const out = new Array(arr.length).fill(null); let s = 0;
+    for (let i = 0; i < arr.length; i++) { s += arr[i]; if (i >= n) s -= arr[i - n]; if (i >= n - 1) out[i] = s / n; }
+    return out;
+  }
+  function ema(arr, n) {          // seeded with the SMA of the first n values (TradingView-style)
+    const out = new Array(arr.length).fill(null), k = 2 / (n + 1); let e = null, s = 0;
+    for (let i = 0; i < arr.length; i++) {
+      if (i < n) { s += arr[i]; if (i === n - 1) { e = s / n; out[i] = e; } continue; }
+      e = arr[i] * k + e * (1 - k); out[i] = e;
+    }
+    return out;
+  }
+  function rollVol(arr, n) {      // sample stdev of daily log returns × √252
+    const out = new Array(arr.length).fill(null);
+    for (let i = n; i < arr.length; i++) {
+      const r = []; for (let j = i - n + 1; j <= i; j++) r.push(Math.log(arr[j] / arr[j - 1]));
+      const m = r.reduce((a, b) => a + b, 0) / n;
+      const v = r.reduce((a, b) => a + (b - m) * (b - m), 0) / (n - 1);
+      out[i] = Math.sqrt(v * 252);
+    }
+    return out;
+  }
+  function rsi(arr, n) {          // Wilder RSI + running averages (for flip prices)
+    const out = new Array(arr.length).fill(null), ag = new Array(arr.length).fill(null), al = new Array(arr.length).fill(null);
+    let g = 0, l = 0;
+    for (let i = 1; i < arr.length; i++) {
+      const ch = arr[i] - arr[i - 1], up = Math.max(ch, 0), dn = Math.max(-ch, 0);
+      if (i <= n) { g += up; l += dn; if (i === n) { g /= n; l /= n; } else continue; }
+      else { g = (g * (n - 1) + up) / n; l = (l * (n - 1) + dn) / n; }
+      ag[i] = g; al[i] = l; out[i] = l === 0 ? 100 : (g === 0 ? 0 : 100 - 100 / (1 + g / l));
+    }
+    return { rsi: out, ag, al };
+  }
+
+  // ---------- Rules ----------
+  function allocAt(r) {
+    if (![r.q, r.qs, r.qsPrev, r.t, r.ts, r.rsi, r.vol].every(ok)) return null;
+    const above = r.q > r.qs, rising = r.qs > r.qsPrev, up = above && rising;
+    const a = { up, above, rising, T: 0, S: 0, C: 1, kind: "" };
+    if (up) {
+      if (r.rsi > cfg.rsiHot) { a.kind = "hot"; return a; }
+      const raw = (cfg.volTarget / 100) / (3 * r.vol);
+      let w = Math.max(0, Math.min(1, Math.round(raw * 4) / 4));
+      a.raw = raw; a.volW = w;
+      a.obvLow = cfg.obvOn === "on" && ok(r.obvE) && r.hasVol && r.obv < r.obvE;
+      if (a.obvLow) w = w / 2;
+      a.T = w; a.C = 1 - w; a.kind = "trend"; return a;
+    }
+    if (r.rsi < cfg.rsiCold) { a.T = 1; a.C = 0; a.kind = "dip"; return a; }
+    if (r.t < r.ts) { a.kind = "short"; if (cfg.mode === "full") { a.S = 0.5; a.C = 0.5; } return a; }
+    a.kind = "cash"; return a;
+  }
+  const cls = a => !a ? "CASH" : a.T > 0 ? "TQQQ" : a.S > 0 ? "SQQQ" : "CASH";
+  const label = a => !a ? "—" : a.T > 0 ? "TQQQ " + pc(a.T) : a.S > 0 ? "SQQQ " + pc(a.S) : "CASH";
+  const mix = a => {
+    if (!a) return "";
+    const parts = [];
+    if (a.T > 0) parts.push("TQQQ " + pc(a.T));
+    if (a.S > 0) parts.push("SQQQ " + pc(a.S));
+    if (a.C > 1e-9) parts.push("Cash/T-bills " + pc(a.C));
+    return parts.join(" · ");
+  };
+  const sameAlloc = (a, b) => a && b && Math.abs(a.T - b.T) < 1e-9 && Math.abs(a.S - b.S) < 1e-9;
+
+  function compute(qqq, tqqq, sqqq) {
+    const tMap = new Map(tqqq.map(x => [x.d, x.c]));
+    const rows = qqq.filter(x => tMap.has(x.d)).map(x => ({ d: x.d, q: x.c, v: isFinite(x.v) ? x.v : 0, t: tMap.get(x.d) }));
+    const n = rows.length;
+    if (n < cfg.smaLen + cfg.slopeLen + 5) throw new Error("Not enough price history (" + n + " days).");
+    const qArr = rows.map(r => r.q), tArr = rows.map(r => r.t);
+    const hasVol = rows.some(r => r.v > 0);
+    const qs = sma(qArr, cfg.smaLen), ts = sma(tArr, cfg.fastLen), R = rsi(tArr, cfg.rsiLen), vol = rollVol(qArr, cfg.volLen);
+    const obv = [0];
+    for (let i = 1; i < n; i++) { const ch = qArr[i] - qArr[i - 1]; obv[i] = obv[i - 1] + (ch > 0 ? rows[i].v : ch < 0 ? -rows[i].v : 0); }
+    const obvE = ema(obv, cfg.obvLen);
+    rows.forEach((r, i) => {
+      r.qs = qs[i]; r.qsPrev = i >= cfg.slopeLen ? qs[i - cfg.slopeLen] : null; r.ts = ts[i]; r.rsi = R.rsi[i];
+      r.vol = vol[i]; r.obv = obv[i]; r.obvE = obvE[i]; r.hasVol = hasVol; r.a = allocAt(r);
+    });
+
+    // Flip prices for the latest bar, solved from history through the bar before it.
+    const i = n - 1, p = i - 1, N = cfg.rsiLen;
+    const sum = (arr, from, to) => { let s = 0; for (let k = from; k <= to; k++) s += arr[k]; return s; };
+    const prior = sum(qArr, i - cfg.smaLen + 1, i - 1);
+    const flipQ = prior / (cfg.smaLen - 1);
+    const flipSlope = ok(rows[i].qsPrev) ? cfg.smaLen * rows[i].qsPrev - prior : null;
+    const flipT = sum(tArr, i - cfg.fastLen + 1, i - 1) / (cfg.fastLen - 1);
+    const g = R.ag[p], l = R.al[p], prevT = tArr[p];
+    const rsiPrice = target => {
+      const Rt = target / (100 - target);
+      const dUp = (N - 1) * (Rt * l - g);
+      if (dUp > 0) return prevT + dUp;
+      return prevT + (N - 1) * (l - g / Rt);
+    };
+    const sLast = sqqq && sqqq.length ? sqqq[sqqq.length - 1] : null;
+    return { rows, flipQ, flipSlope, flipT, flipHot: rsiPrice(cfg.rsiHot), flipCold: rsiPrice(cfg.rsiCold), sqqq: sLast, hasVol };
+  }
+
+  // ---------- Explanations ----------
+  function reasonFor(r) {
+    const a = r.a; if (!a) return "Not enough data.";
+    let reg;
+    if (a.up) reg = `Uptrend: QQQ is above its ${cfg.smaLen}-day average and the average is rising vs ${cfg.slopeLen} days ago.`;
+    else if (!a.above) reg = `Downtrend: QQQ is at or below its ${cfg.smaLen}-day average.`;
+    else reg = `Downtrend: QQQ is above its ${cfg.smaLen}-day average, but the average is lower than ${cfg.slopeLen} days ago.`;
+    let why = "";
+    if (a.kind === "hot") why = `TQQQ RSI (${fmt(r.rsi, 1)}) is above ${cfg.rsiHot}: overheated, 100% cash.`;
+    else if (a.kind === "trend") {
+      why = `QQQ volatility of ${pc(r.vol)} sizes TQQQ at ${pc(a.volW)}`;
+      why += a.obvLow ? `; OBV is below its ${cfg.obvLen}-day EMA, so it's halved to ${pc(a.T)}.` : ".";
+    }
+    else if (a.kind === "dip") why = `TQQQ RSI (${fmt(r.rsi, 1)}) is below ${cfg.rsiCold}: washed out, 100% TQQQ.`;
+    else if (a.kind === "short") why = `TQQQ is below its ${cfg.fastLen}-day average: 50% SQQQ, 50% cash.` +
+      (cfg.mode === "long" ? " (SQQQ leg is off in your settings, so 100% cash.)" : "");
+    else why = `TQQQ is above its ${cfg.fastLen}-day average: 100% cash.`;
+    return reg + " " + why;
+  }
+
+  // ---------- Rebalancing ----------
+  function plan(a, r, sP) {
+    const num = k => { const v = parseFloat(cfg[k]); return isFinite(v) && v > 0 ? v : 0; };
+    const tSh = num("tqqqSh"), sSh = num("sqqqSh"), cash = num("cashAmt");
+    if (tSh + sSh + cash === 0) return null;
+    if ((sSh > 0 || a.S > 0) && !ok(sP)) return { err: "SQQQ price unavailable — can't size the SQQQ leg this update." };
+    const vT = tSh * r.t, vS = sSh * (sP || 0), total = vT + vS + cash;
+    const cw = { T: vT / total, S: vS / total, C: cash / total };
+    const tgtT = Math.floor(a.T * total / r.t), tgtS = ok(sP) ? Math.floor(a.S * total / sP) : 0;
+    const dT = tgtT - tSh, dS = tgtS - sSh;
+    const drift = { T: cw.T - a.T, S: cw.S - a.S, C: cw.C - a.C };
+    const maxDrift = Math.max(...Object.values(drift).map(Math.abs));
+    return { total, cw, drift, maxDrift, need: maxDrift > cfg.drift / 100, dT, dS };
+  }
+  const tradeText = (d, sym) => d > 0 ? `Buy ${d.toLocaleString()} ${sym}` : d < 0 ? `Sell ${(-d).toLocaleString()} ${sym}` : "";
+
+  // ---------- Rendering ----------
+  function render() {
+    renderSlots();
+    if (!last) return;
+    const { rows, flipQ, flipSlope, flipT, flipHot, flipCold, fetchedAt, provisional, sqqq } = last;
+    const r = rows[rows.length - 1], prev = rows[rows.length - 2];
+    const a = r.a;
+    const conf = provisional ? prev : r;
+
+    $("sigBox").className = "signal s-" + cls(a);
+    $("sigLabel").textContent = provisional ? "Target if the market closed now" : "Target at the latest close";
+    $("sigValue").textContent = label(a);
+    $("sigMix").textContent = mix(a);
+    $("sigWhy").textContent = reasonFor(r);
+
+    const pill = $("statusPill");
+    pill.className = "pill " + (provisional ? "p-prov" : "p-final");
+    pill.textContent = provisional ? "Intraday preview" : "Final (closed bar)";
+    $("asOf").textContent = "prices for " + r.d + " · updated " + fetchedAt;
+
+    // Action + rebalance
+    const sP = sqqq ? sqqq.c : null;
+    const pl = a ? plan(a, r, sP) : null;
+    const body = $("rebalBody"); body.innerHTML = "";
+    if (!pl) {
+      $("actionText").textContent = "Target: " + mix(a);
+      $("sizeText").textContent = "Enter your holdings in settings to get share counts.";
+      $("rebalTable").classList.add("hidden");
+      $("rebalNote").textContent = `Enter your current holdings under “Your holdings and settings” to see the trades. Rebalance when the target changes or any holding drifts more than ${cfg.drift} percentage points from target.`;
+    } else if (pl.err) {
+      $("actionText").textContent = "Target: " + mix(a);
+      $("sizeText").textContent = pl.err;
+      $("rebalTable").classList.add("hidden");
+      $("rebalNote").textContent = pl.err;
+    } else {
+      const trades = [tradeText(pl.dT, "TQQQ"), tradeText(pl.dS, "SQQQ")].filter(Boolean)
+        .sort((x, y) => (x.startsWith("Sell") ? -1 : 1) - (y.startsWith("Sell") ? -1 : 1));
+      if (!pl.need) {
+        $("actionText").textContent = "No trade — hold";
+        $("sizeText").textContent = `Every holding is within ${cfg.drift} pp of target (largest drift ${fmt(pl.maxDrift * 100, 1)} pp). Account ≈ ${money(pl.total)}.`;
+      } else {
+        $("actionText").textContent = trades.length ? "Rebalance: " + trades.join(" · ") : "Rebalance (too small for a whole share)";
+        $("sizeText").textContent = `Drift of ${fmt(pl.maxDrift * 100, 1)} pp exceeds the ${cfg.drift} pp band. Account ≈ ${money(pl.total)}; sells first, leftover cash to T-bills.`;
+      }
+      $("rebalTable").classList.remove("hidden");
+      $("rebalNote").textContent = pl.need ? "Rebalance needed." : "Within band — no rebalance needed.";
+      [["TQQQ", "T", pl.dT], ["SQQQ", "S", pl.dS], ["Cash / T-bills", "C", null]].forEach(([nm, k, d]) => {
+        const tr = document.createElement("tr");
+        const dr = pl.drift[k] * 100;
+        tr.innerHTML = `<td class="tag t-${k === "T" ? "TQQQ" : k === "S" ? "SQQQ" : "CASH"}">${nm}</td>` +
+          `<td class="num">${pc(pl.cw[k])}</td><td class="num">${pc(a[k])}</td>` +
+          `<td class="num ${Math.abs(dr) > cfg.drift ? "bad" : ""}">${(dr >= 0 ? "+" : "") + fmt(dr, 1)} pp</td>` +
+          `<td class="num">${d === null ? "" : d === 0 ? "—" : (d > 0 ? "+" : "") + d.toLocaleString() + " sh"}</td>`;
+        body.appendChild(tr);
+      });
+    }
+
+    // Timing guidance
+    const et = etParts(), note = $("timingNote");
+    if (provisional && et.mins < 930) note.innerHTML = "<b>Preview only.</b> The rules decide at the close. Recheck at <b>3:45 PM ET</b> and place market-on-close orders then.";
+    else if (provisional && et.mins < 950) note.innerHTML = "<b>Decision time.</b> If this target holds, enter <b>market-on-close</b> orders now — most brokers stop taking MOC orders around 3:50 PM ET.";
+    else if (provisional) note.innerHTML = "<b>MOC window has likely closed.</b> Trade before 4:00 PM if you still can; next-morning execution degrades results.";
+    else if (et.isWeekday && r.d === et.ymd) note.innerHTML = "<b>Today's close is final.</b> If you traded MOC at 3:45, you're set. Catching up at tomorrow's open is a fallback, and it costs performance.";
+    else note.innerHTML = `<b>Market closed.</b> This is the target from the ${r.d} close. Next decision: <b>3:45 PM ET</b> on the next trading day, with market-on-close orders.`;
+
+    $("confirmedLine").textContent = provisional && conf.a
+      ? `Last confirmed target (close of ${conf.d}): ${mix(conf.a)}.` + (sameAlloc(conf.a, a) ? " Today's preview agrees." : " Today's preview differs — watch the 3:45 check.")
+      : "";
+
+    // Inputs
+    $("qPrice").textContent = money(r.q);
+    $("qSma").textContent = money(r.qs);
+    $("qDist").textContent = pct(r.q / r.qs - 1);
+    $("qSlopeLbl").textContent = `${cfg.smaLen}-day average ${cfg.slopeLen} days ago`;
+    $("qSlope").innerHTML = money(r.qsPrev) + (a ? (a.rising ? ' <span class="ok">rising</span>' : ' <span class="bad">falling</span>') : "");
+    $("regime").innerHTML = a ? (a.up ? '<span class="ok">Uptrend</span>' : '<span class="bad">Downtrend</span>') : "—";
+    $("volLbl").textContent = `QQQ ${cfg.volLen}-day annualized volatility`;
+    $("qVol").textContent = pc(r.vol);
+    const raw = (cfg.volTarget / 100) / (3 * r.vol);
+    $("volSize").textContent = ok(raw) ? `${pc(Math.max(0, Math.min(1, Math.round(raw * 4) / 4)))} (raw ${pc(raw)})` : "—";
+    $("obvLbl").textContent = `QQQ OBV vs its ${cfg.obvLen}-day EMA`;
+    $("obvStat").innerHTML = !last.hasVol ? "No volume data" :
+      ok(r.obvE) ? (r.obv >= r.obvE ? '<span class="ok">Above</span>' : '<span class="bad">Below</span>') +
+      (cfg.obvOn === "on" ? (r.obv < r.obvE ? " — halves TQQQ in uptrends" : "") : " (filter off)") : "—";
+    $("tPrice").textContent = money(r.t);
+    $("rsiLbl").textContent = `TQQQ RSI (${cfg.rsiLen})`;
+    $("tRsi").textContent = fmt(r.rsi, 1);
+    $("rsiFill").style.width = Math.max(0, Math.min(100, r.rsi)) + "%";
+    $("markCold").style.left = cfg.rsiCold + "%"; $("markHot").style.left = cfg.rsiHot + "%";
+    $("rsiScale").textContent = `Oversold below ${cfg.rsiCold} · overbought above ${cfg.rsiHot}`;
+    $("tSmaLbl").textContent = `TQQQ ${cfg.fastLen}-day average`;
+    $("tSma").textContent = money(r.ts);
+    $("tDist").textContent = pct(r.t / r.ts - 1);
+
+    // Flip levels
+    const vs = (lvl, cur) => ok(lvl) ? money(lvl) + " (" + pct(lvl / cur - 1) + ")" : "—";
+    $("flipQ").textContent = vs(flipQ, r.q);
+    $("flipSlope").textContent = vs(flipSlope, r.q);
+    $("flipHot").textContent = vs(flipHot, r.t);
+    $("flipCold").textContent = vs(flipCold, r.t);
+    $("flipT").textContent = vs(flipT, r.t);
+    $("flipNote").textContent = a && a.up
+      ? "Uptrend: the 200-day line, its slope, the overbought level and volatility/OBV decide the size."
+      : "Downtrend: QQQ needs to close above both the 200-day line and the slope level to turn up; otherwise the oversold level and the 20-day line decide.";
+    const k = cfg.volTarget / 100 / 3;
+    const bands = [[1, 0, k / 0.875], [0.75, k / 0.875, k / 0.625], [0.5, k / 0.625, k / 0.375], [0.25, k / 0.375, k / 0.125], [0, k / 0.125, Infinity]];
+    $("bandBody").innerHTML = bands.map(([w, lo, hi]) => {
+      const cur = r.vol > lo && r.vol <= hi || (lo === 0 && r.vol <= hi);
+      return `<tr${cur ? ' style="font-weight:700"' : ""}><td>Vol ${lo === 0 ? "≤ " + pc(hi) : hi === Infinity ? "> " + pc(lo) : pc(lo) + "–" + pc(hi)}</td><td class="num">TQQQ ${pc(w)}${cur ? " ◀" : ""}</td></tr>`;
+    }).join("");
+
+    // Recent sessions
+    const hb = $("histBody"); hb.innerHTML = "";
+    rows.slice(-30).reverse().forEach((x, i) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${x.d}${i === 0 && provisional ? " *" : ""}</td><td class="num">${fmt(x.q)}</td><td class="num">${fmt(x.t)}</td>` +
+        `<td class="num">${fmt(x.rsi, 1)}</td><td class="num">${pc(x.vol)}</td><td class="tag t-${cls(x.a)}">${label(x.a)}</td>`;
+      hb.appendChild(tr);
+    });
+
+    // Target changes
+    const fb = $("flipBody"); fb.innerHTML = "";
+    const flips = [];
+    for (let i = 1; i < rows.length; i++) {
+      const x = rows[i - 1].a, y = rows[i].a;
+      if (x && y && !sameAlloc(x, y)) flips.push({ d: rows[i].d, x, y });
+    }
+    flips.slice(-20).reverse().forEach(f => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${f.d}</td><td class="tag t-${cls(f.x)}">${label(f.x)}</td><td class="tag t-${cls(f.y)}">${label(f.y)}</td>`;
+      fb.appendChild(tr);
+    });
+    if (!flips.length) fb.innerHTML = '<tr><td colspan="3" class="sub">No changes in the loaded history.</td></tr>';
+
+    document.title = label(a) + " · TQQQ Signal Board";
+  }
+
+  function renderSlots() {
+    const et = etParts(), slots = parseSlots(cfg.slots), ran = store.get("ran", {});
+    const box = $("slots"); box.innerHTML = "";
+    let nextFound = false;
+    slots.forEach(s => {
+      const done = et.isWeekday && (ran[et.ymd] || []).includes(s.label);
+      const isNext = !nextFound && et.isWeekday && s.mins > et.mins;
+      if (isNext) nextFound = true;
+      const decide = isDecisionSlot(s.mins);
+      const div = document.createElement("div");
+      div.className = "slot" + (done ? " done" : "") + (isNext ? " next" : "") + (decide ? " decide" : "");
+      const status = done ? "Done today" : isNext ? "Next" : (s.mins <= et.mins && et.isWeekday ? "Missed — update now" : "Scheduled");
+      div.innerHTML = `<b>${fmtSlot(s.mins)}</b>${decide ? "Decision · MOC · " : "Preview · "}${status}`;
+      box.appendChild(div);
+    });
+    const nxt = slots.find(s => et.isWeekday && s.mins > et.mins);
+    $("nextUpdate").textContent = (nxt
+      ? `Next automatic update at ${fmtSlot(nxt.mins)} ET (keep this page open).`
+      : `No more updates today. Next: ${slots.length ? fmtSlot(slots[0].mins) : "—"} ET on the next weekday.`) +
+      (slots.some(s => isDecisionSlot(s.mins)) ? "" : " Add a 15:45 slot — that's the check to act on.");
+    $("clock").textContent = `${et.weekday} ${et.ymd} · ${et.hhmmss} ET · market ${marketOpenNow(et) ? "open" : "closed"}`;
+  }
+
+  // ---------- Update cycle ----------
+  async function update(reason) {
+    if (loading) return;
+    if (!apiKey) { $("setup").classList.remove("hidden"); return; }
+    loading = true; $("refreshBtn").disabled = true;
+    const pill = $("statusPill"); pill.className = "pill p-prov"; pill.textContent = "Updating…";
+    try {
+      const [q, t, s] = await Promise.all([fetchDaily("QQQ"), fetchDaily("TQQQ"),
+        fetchDaily("SQQQ").catch(e => { log("SQQQ quote failed — " + e.message); return null; })]);
+      const res = compute(q, t, s);
+      const et = etParts();
+      const lastRow = res.rows[res.rows.length - 1];
+      res.provisional = lastRow.d === et.ymd && et.isWeekday && et.mins < 960;
+      res.fetchedAt = et.hhmmss + " ET";
+      const prevLabel = last ? label(last.rows[last.rows.length - 1].a) : store.get("lastTarget", null);
+      last = res;
+      render();
+      const lbl = label(lastRow.a);
+      log(`${reason}: ${lbl}${res.provisional ? " (preview)" : ""} · QQQ ${fmt(lastRow.q)} vs 200d ${fmt(lastRow.qs)} · vol ${pc(lastRow.vol)} · TQQQ RSI ${fmt(lastRow.rsi, 1)}`);
+      if (prevLabel && prevLabel !== lbl) notify(`Target changed: ${prevLabel} → ${lbl}`, reasonFor(lastRow));
+      store.set("lastTarget", lbl);
+    } catch (e) {
+      pill.className = "pill p-err"; pill.textContent = "Update failed";
+      log(`${reason}: failed — ${e.message}`);
+      if (/api ?key/i.test(e.message)) $("setup").classList.remove("hidden");
+    } finally { loading = false; $("refreshBtn").disabled = false; }
+  }
+
+  function tick() {
+    const et = etParts();
+    renderSlots();
+    if (!et.isWeekday || !apiKey) return;
+    const ran = store.get("ran", {});
+    const today = ran[et.ymd] || [];
+    const due = parseSlots(cfg.slots).filter(s => s.mins <= et.mins && s.mins > et.mins - 20 && !today.includes(s.label));
+    if (due.length) {
+      const s = due[due.length - 1];
+      store.set("ran", { [et.ymd]: today.concat(due.map(d => d.label)) });
+      update("Scheduled " + fmtSlot(s.mins));
+    }
+  }
+
+  // ---------- Alerts ----------
+  function notify(title, body) {
+    document.title = "⚠ " + title;
+    try { if ("Notification" in window && Notification.permission === "granted") new Notification(title, { body }); } catch (e) {}
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const o = ctx.createOscillator(), g = ctx.createGain(); o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = 880; g.gain.value = 0.08; o.start(); o.stop(ctx.currentTime + 0.4);
+    } catch (e) {}
+  }
+  $("notifyBtn").addEventListener("click", async () => {
+    try {
+      if (!("Notification" in window)) throw new Error("not supported");
+      const p = await Notification.requestPermission();
+      log(p === "granted" ? "Change alerts on (desktop notification + beep)." : "Notifications blocked; you'll still get a beep and a tab-title alert.");
+    } catch (e) { log("Notifications unavailable here; you'll still get a beep and a tab-title alert."); }
+  });
+
+  // ---------- Settings UI ----------
+  function fillSettings() {
+    ["mode", "obvOn", "tqqqSh", "sqqqSh", "cashAmt"].concat(NUM_KEYS).forEach(k => $(k).value = cfg[k]);
+    $("slotsInput").value = cfg.slots; $("keyEdit").value = apiKey;
+  }
+  function readNum(id, min) { const v = parseFloat($(id).value); return isFinite(v) && v >= min ? v : RULE_DEFAULTS[id]; }
+  $("saveSettings").addEventListener("click", () => {
+    const keyChanged = $("keyEdit").value.trim() !== apiKey;
+    const next = {};
+    NUM_KEYS.forEach(k => { let v = readNum(k, k === "drift" ? 0 : 1); if (INT_KEYS.includes(k)) v = Math.round(v); next[k] = v; });
+    next.smaLen = Math.max(10, next.smaLen); next.rsiLen = Math.max(2, next.rsiLen); next.fastLen = Math.max(2, next.fastLen);
+    next.volLen = Math.max(5, next.volLen); next.obvLen = Math.max(2, next.obvLen);
+    const ruleChanged = NUM_KEYS.some(k => next[k] !== cfg[k]) || $("mode").value !== cfg.mode || $("obvOn").value !== cfg.obvOn;
+    cfg = Object.assign(cfg, next, {
+      mode: $("mode").value, obvOn: $("obvOn").value,
+      tqqqSh: $("tqqqSh").value, sqqqSh: $("sqqqSh").value, cashAmt: $("cashAmt").value,
+      slots: parseSlots($("slotsInput").value).map(s => s.label).join(",") || DEFAULTS.slots
+    });
+    store.set("cfg", cfg);
+    if (keyChanged) { apiKey = $("keyEdit").value.trim(); store.set("apiKey", apiKey); }
+    fillSettings();
+    log("Settings saved.");
+    if (keyChanged || ruleChanged || !last) update("Settings changed"); else render();
+  });
+  $("resetSettings").addEventListener("click", () => {
+    cfg = Object.assign({}, cfg, RULE_DEFAULTS);
+    store.set("cfg", cfg); fillSettings(); log("Rule settings restored to defaults."); update("Defaults restored");
+  });
+  // Holdings update the rebalance table live; rule selects recompute from loaded data.
+  ["tqqqSh", "sqqqSh", "cashAmt"].forEach(id => $(id).addEventListener("input", () => {
+    cfg[id] = $(id).value; store.set("cfg", cfg); render();
+  }));
+  ["mode", "obvOn"].forEach(id => $(id).addEventListener("change", () => {
+    cfg[id] = $(id).value; store.set("cfg", cfg); if (last) update("Settings changed");
+  }));
+  $("saveKey").addEventListener("click", () => {
+    const k = $("keyInput").value.trim(); if (!k) return;
+    apiKey = k; store.set("apiKey", apiKey); $("setup").classList.add("hidden"); fillSettings(); update("First load");
+  });
+  $("refreshBtn").addEventListener("click", () => update("Manual update"));
+
+  // ---------- Start ----------
+  $("log").textContent = store.get("log", []).join("\n");
+  fillSettings();
+  renderSlots();
+  if (!apiKey) $("setup").classList.remove("hidden");
+  else update("Page opened");
+  setInterval(tick, 30000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) tick(); });
+})();
+</script>
+</body>
+</html>
